@@ -1,5 +1,3 @@
-package com.harsukhvank.realtimechatapp
-
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
@@ -12,9 +10,11 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.harsukhvank.realtimechatapp.ChatPreview
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -38,10 +38,12 @@ class ChatViewModel(
 
     init {
         selectedChatId = 1
-        _chats.addAll(listOf(
-            ChatPreview(1, "Bot 1", "", true),
-            ChatPreview(2, "Bot 2", "", true)
-        ))
+        _chats.addAll(
+            listOf(
+                ChatPreview(1, "Bot 1", "", true),
+                ChatPreview(2, "Bot 2", "", true)
+            )
+        )
         _messages[1] = mutableStateListOf()
         _messages[2] = mutableStateListOf()
         monitorNetwork()
@@ -96,16 +98,21 @@ class ChatViewModel(
     }
 
     private fun retryQueuedMessages() {
-        var isNotEmpty = false
-        while (messageQueue.isNotEmpty()) {
-            val (chatId, message) = messageQueue.poll()!!
-            _messages[chatId]?.add("Retrying: $message")
-            webSocket.send(message)
-            isNotEmpty = true
-        }
-
-        if(isNotEmpty){
-            showToast("All queued messages sent successfully.")
+        CoroutineScope(Dispatchers.IO).launch {
+            while (messageQueue.isNotEmpty()) {
+                val (chatId, message) = messageQueue.poll()!!
+                val sent = webSocket.send(message)
+                withContext(Dispatchers.Main) {
+                    if (sent) {
+                        _messages[chatId]?.add("Retried: $message")
+                    } else {
+                        _messages[chatId]?.add("Failed to resend: $message")
+                    }
+                }
+            }
+            withContext(Dispatchers.Main) {
+                showToast("All queued messages attempted.")
+            }
         }
     }
 
