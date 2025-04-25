@@ -96,12 +96,17 @@ class ChatViewModel(
     }
 
     private fun retryQueuedMessages() {
+        var isNotEmpty = false
         while (messageQueue.isNotEmpty()) {
             val (chatId, message) = messageQueue.poll()!!
             _messages[chatId]?.add("Retrying: $message")
             webSocket.send(message)
+            isNotEmpty = true
         }
-        showToast("All queued messages sent successfully.")
+
+        if(isNotEmpty){
+            showToast("All queued messages sent successfully.")
+        }
     }
 
     private fun monitorNetwork() {
@@ -114,7 +119,6 @@ class ChatViewModel(
             object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
                     isConnected = true
-                    showToast("Back online. Sending queued messages.")
                     retryQueuedMessages()
                 }
 
