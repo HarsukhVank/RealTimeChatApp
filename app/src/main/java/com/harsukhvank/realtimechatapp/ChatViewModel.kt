@@ -37,6 +37,7 @@ class ChatViewModel(
     private lateinit var webSocket: WebSocket
 
     init {
+        selectedChatId = 1
         _chats.addAll(listOf(
             ChatPreview(1, "Bot 1", "", true),
             ChatPreview(2, "Bot 2", "", true)
@@ -96,10 +97,11 @@ class ChatViewModel(
 
     private fun retryQueuedMessages() {
         while (messageQueue.isNotEmpty()) {
-            val (chatId, message) = messageQueue.poll()
+            val (chatId, message) = messageQueue.poll()!!
             _messages[chatId]?.add("Retrying: $message")
             webSocket.send(message)
         }
+        showToast("All queued messages sent successfully.")
     }
 
     private fun monitorNetwork() {
