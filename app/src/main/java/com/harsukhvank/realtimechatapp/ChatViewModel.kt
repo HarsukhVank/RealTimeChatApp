@@ -99,7 +99,9 @@ class ChatViewModel(
 
     private fun retryQueuedMessages() {
         CoroutineScope(Dispatchers.IO).launch {
+            var isNotEmpty = false
             while (messageQueue.isNotEmpty()) {
+                isNotEmpty = true
                 val (chatId, message) = messageQueue.poll()!!
                 val sent = webSocket.send(message)
                 withContext(Dispatchers.Main) {
@@ -110,8 +112,10 @@ class ChatViewModel(
                     }
                 }
             }
-            withContext(Dispatchers.Main) {
-                showToast("All queued messages attempted.")
+            if(isNotEmpty){
+                withContext(Dispatchers.Main) {
+                    showToast("All queued messages attempted.")
+                }
             }
         }
     }
